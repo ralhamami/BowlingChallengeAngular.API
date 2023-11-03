@@ -26,7 +26,7 @@ namespace BowlingChallengeAngular.API.Services
             }
         }
 
-        public List<Frame> Frames { get; set; }
+        public List<Frame> Frames { get; set; }= new List<Frame>();
 
         public ScorecardService()
         {
@@ -34,13 +34,17 @@ namespace BowlingChallengeAngular.API.Services
         }
         public void AddScore(int pinsKnockedDown)
         {
+            //Call the frame's AddScore so it can handle keeping its own score.
             Frames[_currentFrame].AddScore(pinsKnockedDown);
 
+            //If we're in the last frame and the frame is marked as complete, signal game over.
             if (Frames[_currentFrame] is LastFrame && Frames[_currentFrame].IsComplete)
             {
                 _gameOver = true;
             }
 
+            //If the current frame is complete and it's not game over,
+            //then set the new current frame.
             if (Frames[_currentFrame].IsComplete && !GameOver)
             {
                 Frames[_currentFrame].IsCurrentFrame = false;
@@ -56,12 +60,19 @@ namespace BowlingChallengeAngular.API.Services
             //Add additional points for strikes and spares
             for (int i = 0; i < Frames.Count; i++)
             {
+                //Only calculate the score if the frame is complete
+                //and is not an open frame (since they don't need any special calculation)
+                //and the score is not marked final yet (as we wouldn't want to keep adding
+                //additional points to strikes/spares we already awarded).
                 if (Frames[i].IsComplete && !Frames[i].IsOpenFrame && !Frames[i].IsScoreFinal)
                 {
-                    //Calculate additional points.
+                    //Calculate additional points by determining how many additional shots
+                    //we should add the score of.
                     int additionalPoints = 0;
                     int additionalShotsToTake = Frames[i].IsStrike ? 2 : Frames[i].IsSpare ? 1 : 0;
 
+                    //Then get the values of those additional shots, and add them to the respective
+                    //frame, but ONLY after we've moved enough shots forward to do so.
                     var additionalShots = Frames.Skip(i + 1).SelectMany(f => f.Shots).Where(s => s.HasValue).Take(additionalShotsToTake);
 
                     if (additionalShots.Count() == additionalShotsToTake)
@@ -74,7 +85,7 @@ namespace BowlingChallengeAngular.API.Services
                 }
             }
 
-            //Calculate running totals
+            //Calculate running totals for the bottom of each frame.
             int runningTotal = 0;
 
             foreach (var frame in Frames)
