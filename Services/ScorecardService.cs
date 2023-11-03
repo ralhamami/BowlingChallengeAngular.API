@@ -1,28 +1,29 @@
 ﻿using BowlingChallengeAngular.API.Controllers;
+using BowlingChallengeAngular.API.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.ComponentModel.DataAnnotations;
 
-namespace BowlingChallengeAngular.API.Models
+namespace BowlingChallengeAngular.API.Services
 {
     public class ScorecardService : IScorecardService
     {
         private int _currentFrame;
-        public int CurrentFrame 
+        public int CurrentFrame
         {
-            get 
+            get
             {
                 return _currentFrame;
-            } 
+            }
         }
 
 
         private bool _gameOver;
-        public bool GameOver 
-        { 
-            get 
-            { 
-                return _gameOver; 
-            } 
+        public bool GameOver
+        {
+            get
+            {
+                return _gameOver;
+            }
         }
 
         public List<Frame> Frames { get; set; }
@@ -55,7 +56,7 @@ namespace BowlingChallengeAngular.API.Models
             //Add additional points for strikes and spares
             for (int i = 0; i < Frames.Count; i++)
             {
-                if (Frames[i].IsComplete && !Frames[i].IsOpenFrame && !Frames[i].IsScoreFinal) 
+                if (Frames[i].IsComplete && !Frames[i].IsOpenFrame && !Frames[i].IsScoreFinal)
                 {
                     //Calculate additional points.
                     int additionalPoints = 0;
@@ -76,7 +77,7 @@ namespace BowlingChallengeAngular.API.Models
             //Calculate running totals
             int runningTotal = 0;
 
-            foreach(var frame in Frames)
+            foreach (var frame in Frames)
             {
                 if (frame.IsComplete)
                 {
@@ -105,7 +106,7 @@ namespace BowlingChallengeAngular.API.Models
             _gameOver = false;
             Frames = new List<Frame>(10);
             _currentFrame = 0;
-            for (int i = 0; i < 9; i++) 
+            for (int i = 0; i < 9; i++)
             {
                 Frames.Add(new NormalFrame());
             }

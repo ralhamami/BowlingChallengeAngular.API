@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+﻿using BowlingChallengeAngular.API.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
-namespace BowlingChallengeAngular.API.Models
+namespace BowlingChallengeAngular.API.Services
 {
     public interface IScorecardService
     {

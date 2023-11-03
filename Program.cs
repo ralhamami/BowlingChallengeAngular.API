@@ -1,4 +1,4 @@
-using BowlingChallengeAngular.API.Models;
+using BowlingChallengeAngular.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
