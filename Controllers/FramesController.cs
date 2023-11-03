@@ -17,14 +17,14 @@ namespace BowlingChallengeAngular.API.Controllers
             this.scorecardService = scorecardService;
         }
 
-        //Get all frames
+        //Get all frames.
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Frame>>> GetFrames() 
         {
             return Ok(scorecardService.Frames);
         }
 
-        //Post score and get frames
+        //Post score and get frames.
         [HttpGet("{pinsKnockedDown}")]
         public async Task<ActionResult<IEnumerable<Frame>>> AddShot(int pinsKnockedDown) 
         {
@@ -47,6 +47,7 @@ namespace BowlingChallengeAngular.API.Controllers
             return BadRequest(ModelState);
         }
 
+        //Reset the scorecard.
         [HttpPost]
         [Route("reset")]
         public async Task<ActionResult<IEnumerable<Frame>>> ResetFrames()
