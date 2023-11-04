@@ -18,6 +18,8 @@ namespace BowlingChallengeAngular.API.Services
 
 
         private bool _gameOver;
+        private readonly ILogger<ScorecardService> logger;
+
         public bool GameOver
         {
             get
@@ -28,101 +30,130 @@ namespace BowlingChallengeAngular.API.Services
 
         public List<Frame> Frames { get; set; }= new List<Frame>();
 
-        public ScorecardService()
+        public ScorecardService(ILogger<ScorecardService> logger)
         {
             InitializeScorecard();
+            this.logger = logger;
         }
         public void AddScore(int pinsKnockedDown)
         {
-            //Call the frame's AddScore so it can handle keeping its own score.
-            Frames[_currentFrame].AddScore(pinsKnockedDown);
-
-            //If we're in the last frame and the frame is marked as complete, signal game over.
-            if (Frames[_currentFrame] is LastFrame && Frames[_currentFrame].IsComplete)
+            try
             {
-                _gameOver = true;
-            }
+                //Call the frame's AddScore so it can handle keeping its own score.
+                Frames[_currentFrame].AddScore(pinsKnockedDown);
 
-            //If the current frame is complete and it's not game over,
-            //then set the new current frame.
-            if (Frames[_currentFrame].IsComplete && !GameOver)
+                //If we're in the last frame and the frame is marked as complete, signal game over.
+                if (Frames[_currentFrame] is LastFrame && Frames[_currentFrame].IsComplete)
+                {
+                    _gameOver = true;
+                }
+
+                //If the current frame is complete and it's not game over,
+                //then set the new current frame.
+                if (Frames[_currentFrame].IsComplete && !GameOver)
+                {
+                    Frames[_currentFrame].IsCurrentFrame = false;
+                    _currentFrame++;
+                    Frames[_currentFrame].IsCurrentFrame = true;
+                }
+
+                RecalculateScore();
+            }
+            catch(Exception ex)
             {
-                Frames[_currentFrame].IsCurrentFrame = false;
-                _currentFrame++;
-                Frames[_currentFrame].IsCurrentFrame = true;
+                logger.LogError(ex, ex.Message);
             }
-
-            RecalculateScore();
         }
 
         public void RecalculateScore()
         {
-            //Add additional points for strikes and spares
-            for (int i = 0; i < Frames.Count; i++)
+            try
             {
-                //Only calculate the score if the frame is complete
-                //and is not an open frame (since they don't need any special calculation)
-                //and the score is not marked final yet (as we wouldn't want to keep adding
-                //additional points to strikes/spares we already awarded).
-                if (Frames[i].IsComplete && !Frames[i].IsOpenFrame && !Frames[i].IsScoreFinal)
+                //Add additional points for strikes and spares
+                for (int i = 0; i < Frames.Count; i++)
                 {
-                    //Calculate additional points by determining how many additional shots
-                    //we should add the score of.
-                    int additionalPoints = 0;
-                    int additionalShotsToTake = Frames[i].IsStrike ? 2 : Frames[i].IsSpare ? 1 : 0;
-
-                    //Then get the values of those additional shots, and add them to the respective
-                    //frame, but ONLY after we've moved enough shots forward to do so.
-                    var additionalShots = Frames.Skip(i + 1).SelectMany(f => f.Shots).Where(s => s.HasValue).Take(additionalShotsToTake);
-
-                    if (additionalShots.Count() == additionalShotsToTake)
+                    //Only calculate the score if the frame is complete
+                    //and is not an open frame (since they don't need any special calculation)
+                    //and the score is not marked final yet (as we wouldn't want to keep adding
+                    //additional points to strikes/spares we already awarded).
+                    if (Frames[i].IsComplete && !Frames[i].IsOpenFrame && !Frames[i].IsScoreFinal)
                     {
-                        additionalPoints = additionalShots.Sum().GetValueOrDefault();
-                        Frames[i].IsScoreFinal = true;
-                    }
+                        //Calculate additional points by determining how many additional shots
+                        //we should add the score of.
+                        int additionalPoints = 0;
+                        int additionalShotsToTake = Frames[i].IsStrike ? 2 : Frames[i].IsSpare ? 1 : 0;
 
-                    Frames[i].FrameTotalScore += additionalPoints;
+                        //Then get the values of those additional shots, and add them to the respective
+                        //frame, but ONLY after we've moved enough shots forward to do so.
+                        var additionalShots = Frames.Skip(i + 1).SelectMany(f => f.Shots).Where(s => s.HasValue).Take(additionalShotsToTake);
+
+                        if (additionalShots.Count() == additionalShotsToTake)
+                        {
+                            additionalPoints = additionalShots.Sum().GetValueOrDefault();
+                            Frames[i].IsScoreFinal = true;
+                        }
+
+                        Frames[i].FrameTotalScore += additionalPoints;
+                    }
+                }
+
+                //Calculate running totals for the bottom of each frame.
+                int runningTotal = 0;
+
+                foreach (var frame in Frames)
+                {
+                    if (frame.IsComplete)
+                    {
+                        runningTotal += frame.FrameTotalScore.GetValueOrDefault();
+                        frame.TotalScore = runningTotal;
+                    }
                 }
             }
-
-            //Calculate running totals for the bottom of each frame.
-            int runningTotal = 0;
-
-            foreach (var frame in Frames)
+            catch(Exception ex)
             {
-                if (frame.IsComplete)
-                {
-                    runningTotal += frame.FrameTotalScore.GetValueOrDefault();
-                    frame.TotalScore = runningTotal;
-                }
+                logger.LogError(ex, ex.Message);
             }
         }
 
         public void ValidateShot(int pinsKnockedDown, ModelStateDictionary modelState)
         {
-            if (pinsKnockedDown > 10 || pinsKnockedDown < 0)
+            try
             {
-                modelState.AddModelError("Range", "Input must be between 0 and 10.");
-            }
-            int sum = Frames[_currentFrame].Shots.Where(s => s.HasValue).Sum(s => s.Value) + pinsKnockedDown;
+                if (pinsKnockedDown > 10 || pinsKnockedDown < 0)
+                {
+                    modelState.AddModelError("Range", "Input must be between 0 and 10.");
+                }
+                int sum = Frames[_currentFrame].Shots.Where(s => s.HasValue).Sum(s => s.Value) + pinsKnockedDown;
 
-            if (sum > Frames[_currentFrame].MaxPins || sum < 0)
+                if (sum > Frames[_currentFrame].MaxPins || sum < 0)
+                {
+                    modelState.AddModelError("Total", $"Input cannot result in frame being more than {Frames[_currentFrame].MaxPins}.");
+                }
+            }
+            catch(Exception ex)
             {
-                modelState.AddModelError("Total", $"Input cannot result in frame being more than {Frames[_currentFrame].MaxPins}.");
+                logger.LogError(ex, ex.Message);
             }
         }
 
         private void InitializeScorecard()
         {
-            _gameOver = false;
-            Frames = new List<Frame>(10);
-            _currentFrame = 0;
-            for (int i = 0; i < 9; i++)
+            try
             {
-                Frames.Add(new NormalFrame());
+                _gameOver = false;
+                Frames = new List<Frame>(10);
+                _currentFrame = 0;
+                for (int i = 0; i < 9; i++)
+                {
+                    Frames.Add(new NormalFrame());
+                }
+                Frames.Add(new LastFrame());
+                Frames[_currentFrame].IsCurrentFrame = true;
             }
-            Frames.Add(new LastFrame());
-            Frames[_currentFrame].IsCurrentFrame = true;
+            catch(Exception ex)
+            {
+                logger.LogError(ex, ex.Message);
+            }
         }
 
         public void ResetScorecard()

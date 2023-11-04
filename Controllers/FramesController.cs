@@ -1,8 +1,6 @@
 ﻿using BowlingChallengeAngular.API.Models;
 using BowlingChallengeAngular.API.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Runtime.CompilerServices;
 
 namespace BowlingChallengeAngular.API.Controllers
 {
@@ -11,16 +9,19 @@ namespace BowlingChallengeAngular.API.Controllers
     public class FramesController : ControllerBase
     {
         private readonly IScorecardService scorecardService;
+        private readonly ILogger<FramesController> logger;
 
-        public FramesController(IScorecardService scorecardService)
+        public FramesController(IScorecardService scorecardService, ILogger<FramesController> logger)
         {
             this.scorecardService = scorecardService;
+            this.logger = logger;
         }
 
         //Get all frames.
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Frame>>> GetFrames() 
         {
+            logger.LogInformation("Getting the blank frames...");
             return Ok(scorecardService.Frames);
         }
 
@@ -28,23 +29,31 @@ namespace BowlingChallengeAngular.API.Controllers
         [HttpGet("{pinsKnockedDown}")]
         public async Task<ActionResult<IEnumerable<Frame>>> AddShot(int pinsKnockedDown) 
         {
-            if (!scorecardService.GameOver)
+            try
             {
-                scorecardService.ValidateShot(pinsKnockedDown, ModelState);
-
-                if (ModelState.IsValid)
+                if (!scorecardService.GameOver)
                 {
-                    scorecardService.AddScore(pinsKnockedDown);
+                    scorecardService.ValidateShot(pinsKnockedDown, ModelState);
 
-                    return Ok(scorecardService.Frames);
+                    if (ModelState.IsValid)
+                    {
+                        scorecardService.AddScore(pinsKnockedDown);
+
+                        return Ok(scorecardService.Frames);
+                    }
                 }
-            }
-            else
-            {
-                ModelState.AddModelError("Game Over", "Game over. Please reset.");
-            }
+                else
+                {
+                    ModelState.AddModelError("Game Over", "Game over. Please reset.");
+                }
 
-            return BadRequest(ModelState);
+                return BadRequest(ModelState);
+            }
+            catch(Exception ex)
+            {
+                logger.LogError(ex,ex.Message);
+                return StatusCode(500, ex.Message);
+            }
         }
 
         //Reset the scorecard.
