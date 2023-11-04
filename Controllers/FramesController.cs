@@ -21,8 +21,15 @@ namespace BowlingChallengeAngular.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Frame>>> GetFrames() 
         {
-            logger.LogInformation("Getting the blank frames...");
-            return Ok(scorecardService.Frames);
+            try
+            {
+                return Ok(scorecardService.Frames);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, ex.Message);
+                return StatusCode(500,ex.Message);
+            }
         }
 
         //Post score and get frames.
@@ -61,8 +68,16 @@ namespace BowlingChallengeAngular.API.Controllers
         [Route("reset")]
         public async Task<ActionResult<IEnumerable<Frame>>> ResetFrames()
         {
-            scorecardService.ResetScorecard();
-            return Ok(scorecardService.Frames);
+            try
+            {
+                scorecardService.ResetScorecard();
+                return Ok(scorecardService.Frames);
+            }
+            catch(Exception ex)
+            {
+                logger.LogError(ex, ex.Message);
+                return StatusCode(500, ex.Message);
+            }
         }
     }
 }
